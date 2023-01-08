@@ -1,2 +1,2 @@
 # lincoln
-A water resource systems game
+Water resource operations and systems games.
