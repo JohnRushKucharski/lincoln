@@ -1,0 +1,46 @@
+[node]
+    
+    [node.hetch_hetchy_inflow]
+    tag = 'inflow'
+    seasons = ['winter', 'summer']
+    generators = ['uniform', 'uniform']
+    parameters = [[0, 5], [0, 1]]
+    
+    [node.hetch_hetchy]
+    tag = 'storage'
+    initial = 1
+    capacity = 5
+
+    [node.san_joaquin_pipeline]
+    tag = 'outflow'
+    capacity = 2
+
+    [node.don_pedro_inflow]
+    tag = 'inflow'
+    seasons = ['winter', 'summer']
+    generators = ['uniform', 'uniform']
+    parameters = [[10, 20], [0, 5]]
+    
+    [node.don_pedro_rescaler]
+    tag = 'transfer'
+    factor = 0.5
+
+    [node.don_pedro]
+    tag = 'storage'
+    initial = 10
+    capacity = 15
+
+    [node.outlet]
+    tag = 'outlet'
+
+[system]
+order = ['hetch_hetchy_inflow', 'hetch_hetch', 'san_joaquin_pipeline', 'don_pedro_inflow', 'don_pedro_rescaler', 'don_pedro', 'outlet']
+matrix = [
+    [0, 1, 0, 0, 0, 0, 0],
+    [0, 0, 1, 0, 0, 0, 0],
+    [0, 0, 0, 0, 1, 0, 0],
+    [0, 0, 0, 0, 1, 0, 0],
+    [0, 0, 0, 0, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 1],
+    [0, 0, 0, 0, 0, 0, 0]
+]

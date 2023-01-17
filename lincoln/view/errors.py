@@ -1,0 +1,1 @@
+# need to centralize and better handle errors. Something like: https://github.com/tiangolo/typer/issues/310

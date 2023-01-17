@@ -1,0 +1,33 @@
+[node]
+
+    [node.inflow]
+    tag = "inflow"
+    seasons = ['']
+    generators = ["uniform"]
+    parameters = [[2, 12]]
+
+    [node.lincoln_dam]
+    tag = "storage"
+    initial = 3
+    capacity = 15
+
+    [node.outlet]
+    tag = "outlet"
+
+[system]
+order = ["inflow", "lincoln_dam", "outlet"]
+matrix = [
+    [0, 1, 0],
+    [0, 0, 1],
+    [0, 0, 0],
+]
+
+# notes on matrix creation...
+# matrix = 
+# [                         TO
+# F              inflow, lincoln_dam, outlet
+# R      inflow     [0,     1,          0],
+# O lincoln_dam     [0,     0,          1],
+# M     outflet     [0,     0,          0], - outlet node row always all zeros, flow leaves system (does not go to any other node).
+# ]                   \  
+#                       inflow node column always zeros, flow is generated at node (does not come from any other node).
