@@ -34,7 +34,7 @@
     tag = 'outlet'
 
 [system]
-order = ['hetch_hetchy_inflow', 'hetch_hetch', 'san_joaquin_pipeline', 'don_pedro_inflow', 'don_pedro_rescaler', 'don_pedro', 'outlet']
+node_order = ['hetch_hetchy_inflow', 'hetch_hetch', 'san_joaquin_pipeline', 'don_pedro_inflow', 'don_pedro_rescaler', 'don_pedro', 'outlet']
 matrix = [
     [0, 1, 0, 0, 0, 0, 0],
     [0, 0, 1, 0, 0, 0, 0],

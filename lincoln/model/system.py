@@ -5,10 +5,11 @@ System of nodes.
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
 
+from lincoln.utilities import exception_handler
 from lincoln.model import node
 from lincoln.model.node import Node
 
-def SystemValidationError(Exception):
+class SystemValidationError(Exception):
     pass
     
 @dataclass
@@ -18,19 +19,40 @@ class Network:
     '''Node names in order their data appears as row or columns in matrix.'''
     matrix: List[List[str]]
     '''A square mxm matrix that describes the connection between system nodes. Entry is 1 if matrix row node is connected to matrix column node, 0 otherwise.'''
-
-    def __post_init__(self) -> None:
-        self.validate()
-
-    def validate(self) -> None:
-        #l = [len(self.matrix)] + [len(self.matrix[i]) for i in range(0, len(self.matrix))] + [len(self.names)]
-        if len(set([len(self.matrix)] + [len(self.matrix[i]) for i in range(0, len(self.matrix))] + [len(self.names)])) != 1:
-            raise ValueError('The system network matrix is not mxm (i.e. square) or the number of node names, does not match the number row and column entries in the matrix.')
  
 @dataclass
 class System:
     network: Network
     nodes: Dict[str, Node] = field(default_factory=lambda: {})
+
+    @staticmethod
+    @exception_handler(SystemValidationError, 4)
+    def validate_keys(data: Dict[str, Any]):
+        keys = ['node', 'system', 'node_order', 'matrix']
+        for i in range(0, 2):
+            if keys[i] not in data:
+                raise SystemValidationError(f'The configuration file data is missing the required: \"{keys[i]}\" key.')
+        for i in range(2, len(keys)):
+            if keys[i] not in data[keys[1]]:
+                raise SystemValidationError(f'The configuration file \"system\" data is missing the required: \"{keys[i]}\" key.')
+    
+    @staticmethod
+    @exception_handler(SystemValidationError, 4)
+    def validate_data(data: Dict[str, Any]) -> None:
+        #l = [len(self.matrix)] + [len(self.matrix[i]) for i in range(0, len(self.matrix))] + [len(self.names)]
+        if len(set([len(data['system']['matrix'])] + [len(data['system']['matrix'][i]) for i in range(0, len(data['system']['matrix']))] + [len(data['system']['node_order'])])) != 1:
+            raise SystemValidationError(f'The system network matrix in the configuration file data must be square (i.e. mxm), with m cooresponding to the number of nodes named in the \"node_order\" data. The current matrix contains: {len(data["system"]["matrix"])} rows, with {[len(data["system"]["matrix"][i]) for i in range(0, len(data["system"]["matrix"]))]} entries in each row. {len(data["system"]["node_order"])} nodes are identified in the \"node_order\" data.')
+
+    @staticmethod
+    @exception_handler(SystemValidationError, 4)    
+    def validate_nodes(data: Dict[str, Any]):
+        node_names = data['system']['node_order']
+        for name in node_names:
+            if name not in data['node']:
+                raise SystemValidationError(f'The {name} node is named in the configuration file \"system\" \"node_order\" data but is not found in the configuration file \"node\" data.')
+        for name in data['node']:
+            if name not in node_names:
+                raise SystemValidationError(f'The configuration file \"node\" data contains a {name} node that is not named in the configuration file \"system\" \"node_order\" data.')
 
     # def diagram(self):
     #     layers = []
@@ -48,14 +70,20 @@ class System:
     #             current_layer = [k for k, v in self.nodes.items() if ]
 
 def factory(data: Dict[str, Any]):
-    # a recursive solution would be better here.  
+    #TODO: #3 A recursive solution system node generation would be better.
     senders = {}
-    system = System(Network(data['system']['order'], data['system']['matrix']))
+    validate(data)
+    system = System(Network(data['system']['node_order'], data['system']['matrix']))
     while len(system.nodes) != len(system.network.names):
         new_layer = _add_layer(system, senders, data)
         system.nodes.update(new_layer)
         senders = new_layer
     return system
+
+def validate(data: Dict[str, Any]) -> None:
+    System.validate_keys(data)
+    System.validate_data(data)
+    System.validate_nodes(data)
 
 def _add_layer(system: System, senders: Dict[str, Node], data: Dict[str, Any]) -> Dict[str, Node]:
     return _add_receiver_nodes(system, senders, data) if senders else _add_inflow_nodes(system, data)

@@ -15,7 +15,7 @@
     tag = "outlet"
 
 [system]
-order = ["inflow", "lincoln_dam", "outlet"]
+node_order = ["inflow", "lincoln_dam", "outlet"]
 matrix = [
     [0, 1, 0],
     [0, 0, 1],

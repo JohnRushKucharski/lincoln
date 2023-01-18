@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import List, Set, Dict, Any, Callable, Protocol
 
 from lincoln.model import generators
+from lincoln.utilities import exception_handler
 
 class Tag(str, Enum):
     '''Describes the type of node.'''
@@ -29,6 +30,9 @@ def factory(**kwargs):
         'outlet' : OutletNode.deserialize
     }
     return constructors[kwargs['tag']](kwargs)
+
+class NodeValidationError(Exception):
+    pass
 
 class Node(Protocol):
     @property
@@ -76,22 +80,34 @@ class InflowNode:
     def serialize(self) -> Dict[str, Any]:
         return self._data.update(self.senders) 
     @staticmethod
+    @exception_handler(NodeValidationError, 9)
     def deserialize(data: Dict[str, Any]) -> 'InflowNode':
         '''Builds object from dictionary of object data.'''
-        InflowNode.validate(data)
+        InflowNode.validate_keys(data)
+        InflowNode.validate_data(data)
         genies: Dict[str, Callable[..., int]] = {}
         for i in range(0, len(data['generators'])):
+            # TODO: #2 add plugin architecture for generators.
             match data['generators'][i]:
                 case 'uniform':
                     genies[data['seasons'][i]] = partial(generators.uniform_generator, min=data['parameters'][i][0], max=data['parameters'][i][1])
                 case other:
-                    raise NotImplementedError()
+                    raise NodeValidationError(f'\"{data["generators"][i]}\" is not an implemented inflow node generator.')
         return InflowNode(data, genies)
     
     @staticmethod
-    def validate(data: Dict[str, Any]):
+    @exception_handler(KeyError, 10)
+    def validate_keys(data: Dict[str, Any]):
+        keys = ['tag', 'generators', 'seasons', 'parameters']
+        for key in keys:
+            if key not in data.keys():
+                raise KeyError(f'{key} data is missing from the input node data.')
+            
+    @staticmethod
+    @exception_handler(NodeValidationError, 9)
+    def validate_data(data: Dict[str, Any]):
         if len(set([len(data['seasons']), len(data['generators']), len(data['parameters'])])) != 1:
-            raise ValueError('The number of generators does not match the number of seasons or parameters.')
+            raise NodeValidationError('There is not a one-to-one mapping between the provided inflow node generators, seasons, and generator parameters.')
     
     def request_inflow(self, season: str = '') -> int:
         return self.send(season)          
@@ -123,8 +139,24 @@ class StorageNode:
         }
     @staticmethod
     def deserialize(data: Dict[str, Any]):
+        StorageNode.validate_keys(data)
+        StorageNode.validate_data(data)
         return StorageNode(storage=data['initial'], capacity=data['capacity'], _initial=data['initial'])
     
+    @staticmethod
+    @exception_handler(KeyError, 10)
+    def validate_keys(data: Dict[str, Any]):
+        keys = ['tag', 'initial', 'capacity']
+        for key in keys:
+            if key not in data.keys():
+                raise KeyError(f'{key} data is missing from the storage node data.')
+            
+    @staticmethod
+    @exception_handler(NodeValidationError, 9)
+    def validate_data(data: Dict[str, Any]):
+        if data['initial'] < 0 or data['capacity'] < 0:
+            raise NodeValidationError(f'The initial: {data["initial"]}, and capacity: {data["capacity"]} storage parameters must be set to positive integer values, with initial \u2264 capacity storage.')
+        
     def add_sender(self, kvpair: Dict[str, Node]) -> None:
         self._senders.update(kvpair)
     def remove_sender(self, kvpair: Dict[str, Node]) -> None:
